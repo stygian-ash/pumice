@@ -1,0 +1,134 @@
+$passoptions.latex()$
+\documentclass[
+	12pt,
+	letterpaper,
+	$for(classoption)$
+	  $classoption$$sep$,
+	$endfor$
+]{$documentclass$}
+$if(beamerarticle)$
+\usepackage{beamerarticle} % needs to be loaded first
+$endif$
+\usepackage{xcolor}
+
+% \usepackage[margin=1in,
+% $if(geometry)$
+% $for(geometry)$$geometry$$sep$,$endfor$
+% $endif$]{geometry}
+
+$if(preamble)$
+\usepackage{$preamble$}
+$endif$
+$--
+$-- section numbering
+$--
+$if(numbersections)$
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$5$endif$}
+$else$
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+$endif$
+$fonts.latex()$
+$common.latex()$
+$for(header-includes)$
+$header-includes$
+$endfor$
+$after-header-includes.latex()$
+$hypersetup.latex()$
+
+$if(title)$
+\title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
+$endif$
+\usepackage{etoolbox}
+\newif\iffirstsection
+\firstsectiontrue
+\pretocmd{\section}{\iffirstsection\firstsectionfalse\else\clearpage\fi}{}{}
+$if(subtitle)$
+\makeatletter
+\providecommand{\subtitle}[1]{% add subtitle to \maketitle
+  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
+}
+\makeatother
+\subtitle{$subtitle$}
+$endif$
+\author{$for(author)$$author$$sep$ \and $endfor$}
+\date{$date$}
+\usepackage{framed}
+
+\begin{document}
+$if(has-frontmatter)$
+\frontmatter
+$endif$
+$if(title)$
+\thispagestyle{empty}
+\clearpage
+\begin{framed}
+	\setlength{\parindent}{0pt}
+	\textbf{$course$} %
+	\hfill\textit{$instructor$}
+	\begin{center}
+		{\Large $title$}
+	\end{center}
+	\textit{$author$} \hfill \textit{Due $due-date$}
+\end{framed}
+\ifx\insidemaster\undefined
+	\hypersetup{
+		pdftitle = {$course$ – $title$}
+	}
+\fi
+$endif$
+
+$for(include-before)$
+$include-before$
+
+$endfor$
+$if(toc)$
+$if(toc-title)$
+\renewcommand*\contentsname{$toc-title$}
+$endif$
+{
+$if(colorlinks)$
+\hypersetup{linkcolor=$if(toccolor)$$toccolor$$else$$endif$}
+$endif$
+\setcounter{tocdepth}{$toc-depth$}
+\tableofcontents
+}
+$endif$
+$if(lof)$
+\listoffigures
+$endif$
+$if(lot)$
+\listoftables
+$endif$
+$if(linestretch)$
+\setstretch{$linestretch$}
+$endif$
+$if(has-frontmatter)$
+\mainmatter
+$endif$
+$body$
+
+$if(has-frontmatter)$
+\backmatter
+$endif$
+$if(natbib)$
+$if(bibliography)$
+$if(biblio-title)$
+$if(has-chapters)$
+\renewcommand\bibname{$biblio-title$}
+$else$
+\renewcommand\refname{$biblio-title$}
+$endif$
+$endif$
+\bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
+
+$endif$
+$endif$
+$if(biblatex)$
+\printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
+
+$endif$
+$for(include-after)$
+$include-after$
+
+$endfor$
+\end{document}
