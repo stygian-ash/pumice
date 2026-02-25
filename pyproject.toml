@@ -1,0 +1,9 @@
+[project]
+name = "pumice"
+license = "MIT"
+license-files = ["LICENSE"]
+version = "0.1.0"
+description = "A little tool for rendering my Obsidian notes to LaTeX PDFs."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
