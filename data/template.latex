@@ -11,10 +11,9 @@ $if(beamerarticle)$
 $endif$
 \usepackage{xcolor}
 
-% \usepackage[margin=1in,
-% $if(geometry)$
-% $for(geometry)$$geometry$$sep$,$endfor$
-% $endif$]{geometry}
+$if(geometry)$
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+$endif$
 
 $if(preamble)$
 \usepackage{$preamble$}
