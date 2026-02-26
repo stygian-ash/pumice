@@ -1,0 +1,7 @@
+#!/bin/bash
+# Script for processing a file with pumice. All arguments are passed to pandoc.
+
+PUMICE_HOME="$(dirname "$(dirname "$(realpath "$0")")")"
+source "$PUMICE_HOME/.venv/bin/activate"
+
+pandoc --template "$PUMICE_HOME"/data/template.latex --filter "$PUMICE_HOME"/src/pumice.py "$@"
