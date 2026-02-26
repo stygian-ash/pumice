@@ -138,6 +138,8 @@ def find_note_uncle(path: Path, filename: str) -> Path | None:
 
 def fix_equation_environments(key: str, value, format: str, meta):
     """Fix amsmath equation environments improperly nested inside DisplayMath blocks."""
+    if format != "latex":
+        return
     if (
         key == "Math"
         and value[0]["t"] == "DisplayMath"
