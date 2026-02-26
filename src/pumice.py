@@ -152,7 +152,11 @@ def fix_equation_environments(key: str, value, format: str, meta):
     lambda result, include: result is None
     or (result.exists() and str(result).endswith(str(Path(include))))
 )
+# FIXME: How does this work with paths containing spaces? Do we need to URL
+# decode them?
 def resolve_vault_relative_include(include: str, working_dir: Path) -> Path | None:
+    """Resolve a vault-relative path. Search for a file matching `include` in
+    the Obsidian vault containing `working_dir`."""
     vault_root = None
     for parent in itertools.chain([working_dir], working_dir.parents):
         if (path := parent / include).exists():
