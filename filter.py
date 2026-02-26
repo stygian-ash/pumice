@@ -9,6 +9,7 @@ from pathlib import Path
 from io import TextIOWrapper
 from argparse import ArgumentParser, ArgumentError
 
+from loguru import logger
 from psutil import Process
 from icontract import require, ensure
 from pandocfilters import applyJSONFilters, RawInline
@@ -28,6 +29,7 @@ def find_pandoc_process(process: Process | None = None) -> Process | None:
     for parent in process.parents():
         if parent.name() == "pandoc":
             return parent
+    logger.warning("Failed to find parent Pandoc process")
     return None
 
 
@@ -71,7 +73,8 @@ def extract_document_from_pandoc_cmdline(cmdline: list[str]) -> str | None:
     parser.add_argument("--verbose", action="store_true")
     try:
         args = parser.parse_args(cmdline[1:])
-    except ArgumentError:
+    except ArgumentError as exception:
+        logger.warning(f"Received malformed commandline {cmdline}: {exception}")
         return None
     return args.inputfile
 
@@ -134,6 +137,7 @@ def insert_preamble(ast: Any, preamble: Path) -> Any:
     """Insert the LaTeX preamble path into the AST's metadata block."""
     path = str(preamble.absolute().with_suffix(""))
     ast["meta"]["preamble"] = {"t": "MetaInlines", "c": [{"t": "Str", "c": path}]}
+    logger.info(f'Inserted link to preamble "{path}"')
     return ast
 
 
@@ -144,26 +148,31 @@ def filter_ast(ast: Any, format: str = "") -> Any:
     :param format: The Pandoc output format of the document.
     :return: A dictionary representation of the filtered AST."""
 
+    logger.info(f"Filtering JSON for output format {format}")
     if document := get_pandoc_document():
+        logger.info(f'Input document is "{str(document)}"')
         # Preamble from the Extended MathJax plugin
         if preamble := find_note_uncle(document, "preamble.sty"):
             ast = insert_preamble(ast, preamble)
 
-    ast = json.loads(
-        applyJSONFilters([fix_equation_environments], json.dumps(ast), format)
-    )
+    filters = [fix_equation_environments]
+    logger.info(f"Applying {len(filters)} AST transformations")
+    ast = json.loads(applyJSONFilters(filters, json.dumps(ast), format))
     return ast
 
 
 def main():
     input = TextIOWrapper(sys.stdin.buffer, encoding="utf-8").read()
+    logger.info(f"Read {len(input)} bytes")
     format = sys.argv[1] if len(sys.argv) > 1 else ""
     # XXX: This is pretty inefficient as in total we are:
     #   loading -> dumping -> loading -> walking tree -> dumping -> loading -> dumping
     # Streamlining this would require reimplementation of `applyJSONFilters`.
     ast = json.loads(input)
     filtered = filter_ast(ast, format)
-    sys.stdout.write(json.dumps(filtered))
+    output = json.dumps(filtered)
+    logger.info(f"Wrote {len(output)} bytes")
+    sys.stdout.write(output)
 
 
 if __name__ == "__main__":
