@@ -1,6 +1,6 @@
 # Pumice
 
-A little tool for rendering my Obsidian notes to LaTeX PDFs. 
+A little tool for rendering my Obsidian notes to PDFs with LaTeX and Pandoc.
 Presently only supports rendering homework submissions.
 
 ## Usage
