@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""A Pandoc JSON filter for rendering Obsidian markdown files to LaTeX."""
 
 import re
 import sys
