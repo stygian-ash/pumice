@@ -25,7 +25,12 @@ $--
 $if(numbersections)$
 \setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$5$endif$}
 $else$
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Silently number sections so that \numberwithin{equation}{section} doesn't
+% look weird. See https://tex.stackexchange.com/a/136531
+\makeatletter
+\renewcommand{\@seccntformat}[1]{}
+\makeatother
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$5$endif$}
 $endif$
 $fonts.latex()$
 $common.latex()$
