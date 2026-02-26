@@ -5,7 +5,7 @@ Presently only supports rendering homework submissions.
 
 ## Usage
 ```bash
-pandoc -t pdf --template ./template.latex --filter ./filter.py in.md -o out.pdf
+pandoc -t pdf --template ./template.latex --filter ./pumice.py in.md -o out.pdf
 ```
 
 Supports loading the `preamble.sty` file supported by [Obsidian Extended MathJax]
