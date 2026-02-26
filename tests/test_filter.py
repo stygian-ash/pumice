@@ -1,5 +1,5 @@
 import pytest
-from filter import *
+from pumice import *
 
 
 @pytest.mark.parametrize(
