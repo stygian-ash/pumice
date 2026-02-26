@@ -113,6 +113,7 @@ def find_note_uncle(path: Path, filename: str) -> Path | None:
     :param filename: The name of the file to search for.
     :return: A path to the file, or None if not found.
     """
+    path = path.absolute()  # XXX: how does this work with symlinks?
     for parent in itertools.chain([path], path.parents):
         if parent.is_dir() and (uncle := parent / filename).exists():
             return uncle
