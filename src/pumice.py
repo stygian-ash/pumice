@@ -5,11 +5,12 @@ import re
 import sys
 import json
 import itertools
-from typing import Any, Callable
+from typing import Any, Callable, TextIO
 from pathlib import Path
 from io import TextIOWrapper
 from argparse import ArgumentParser, ArgumentError
 
+import yaml
 from loguru import logger
 from psutil import Process
 from icontract import require, ensure
@@ -213,6 +214,59 @@ def insert_preamble(ast: Any, preamble: Path) -> Any:
     return ast
 
 
+def read_metadata_block(file: TextIO) -> dict[str, Any]:
+    """Read the Pandoc/Obsidian metadata block from a Markdown file."""
+    if file.readline().strip() != "---":
+        return {}
+    lines = []
+    while (line := file.readline()).strip() != "---":
+        lines.append(line)
+    metadata = yaml.safe_load("".join(lines))
+    return metadata
+
+
+def extend_metadata_text_field(metadata: dict[str, Any], key: str, value: str) -> None:
+    """Insert a key into the Pandoc JSON metadata block only if it does not already exist."""
+    if key not in metadata:
+        logger.debug(f'Adding "{key}" field "{value}"')
+        metadata[key] = {"t": "MetaInlines", "c": [{"t": "Str", "c": value}]}
+
+
+@require(lambda name: len(name.strip().split()) > 0)
+@ensure(lambda result: result.startswith("Dr. ") or result.startswith("Prof. "))
+def shorten_instructor_name(name: str) -> str:
+    '''Shorten an instructor's full name and potentially add a title.
+
+    :param name: The instructor's name from the front matter, in western order,
+        with optional title and potentially surrounded by a wikilink.
+    :return: A shortened form of the instructor's name, such as "Dr. Curie" or
+        "Prof. Oppenheimer". When no title is present, default to "Prof."'''
+    # Remove potential wikilink
+    name = re.sub(r"(\[\[)?(.+?)(\]\])?", r"\2", name.strip()).strip()
+    parts = name.split()
+    surname = parts[-1]
+    if parts[0] in {"Dr.", "Prof."}:
+        title = parts[0]
+    else:
+        title = "Prof."
+    return f"{title} {surname}"
+
+
+# TODO: Should this insert all fields from the front matter, ideally in a format like `course.<field>`?
+def insert_front_matter(ast: Any, front_matter: Path) -> Any:
+    """Insert data from the course front matter file into the AST metadata."""
+    with front_matter.open("r") as f:
+        metadata = read_metadata_block(f)
+    logger.info(f"Processing front matter block with {len(metadata.keys())} fields.")
+    if "instructor" in metadata:
+        extend_metadata_text_field(
+            ast["meta"], "instructor", shorten_instructor_name(metadata["instructor"])
+        )
+    if "id" in metadata:
+        extend_metadata_text_field(ast["meta"], "course", metadata["id"])
+    return ast
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -229,6 +283,9 @@ def filter_ast(ast: Any, format: str = "") -> Any:
         if preamble := find_note_uncle(document, "preamble.sty"):
             ast = insert_preamble(ast, preamble)
         filters.append(vault_relative_path_resolver(document.parent))
+        if front_matter := find_note_uncle(document, "Front Matter.md"):
+            logger.info(f'Found front matter at "{front_matter}"')
+            ast = insert_front_matter(ast, front_matter)
 
     logger.info(f"Applying {len(filters)} AST transformations")
     ast = json.loads(applyJSONFilters(filters, json.dumps(ast), format))

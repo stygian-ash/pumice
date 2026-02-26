@@ -30,3 +30,18 @@ from pumice import *
 )
 def test_extract_pandoc_cmdline(cmdline: list[str], expected: str | None):
     assert extract_document_from_pandoc_cmdline(cmdline) == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("Dr. Curie", "Dr. Curie"),
+        ("[[Dr. Curie]]", "Dr. Curie"),
+        ("Dr. Marie Curie", "Dr. Curie"),
+        ("Dr. Mary Skłodowska Curie", "Dr. Curie"),
+        ("Mary Skłodowska Curie", "Prof. Curie"),
+        ("Curie", "Prof. Curie"),
+    ],
+)
+def test_shorten_instructor_name(name: str, expected: str):
+    assert shorten_instructor_name(name) == expected
