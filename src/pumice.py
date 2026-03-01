@@ -14,7 +14,7 @@ import yaml
 from loguru import logger
 from psutil import Process
 from icontract import require, ensure
-from pandocfilters import applyJSONFilters, RawInline
+from pandocfilters import applyJSONFilters, RawInline, Str
 
 
 @ensure(lambda result: result is None or result.cmdline()[0].endswith("pandoc"))
@@ -207,13 +207,29 @@ def vault_relative_path_resolver(
     return resolver
 
 
+def extend_metadata_text_field(metadata: dict[str, Any], key: str, value: str) -> bool:
+    """Insert a key into the Pandoc JSON metadata block only if it does not
+    already exist.
+
+    :param metadata: The metadata block from Pandoc's JSON output.
+    :param key: The name of the metadata field to insert.
+    :param value: The value of the metadata field to insert.
+    :return: Whether the data was inserted into the block. `False` if the
+        key already existed."""
+    if key not in metadata:
+        logger.debug(f'Adding "{key}" field "{value}"')
+        metadata[key] = {"t": "MetaInlines", "c": [Str(value)]}
+        return True
+    return False
+
+
 # TODO: if a preamble already exists, preserve it and absolutize it if it is relative
 @require(lambda preamble: preamble.suffix in {".sty", ""})
 def insert_preamble(ast: Any, preamble: Path) -> Any:
     """Insert the LaTeX preamble path into the AST's metadata block."""
     path = str(preamble.absolute().with_suffix(""))
-    ast["meta"]["preamble"] = {"t": "MetaInlines", "c": [{"t": "Str", "c": path}]}
-    logger.info(f'Inserted link to preamble "{path}"')
+    if extend_metadata_text_field(ast["meta"], "preamble", path):
+        logger.info(f'Inserted link to preamble "{path}"')
     return ast
 
 
@@ -226,13 +242,6 @@ def read_metadata_block(file: TextIO) -> dict[str, Any]:
         lines.append(line)
     metadata = yaml.safe_load("".join(lines))
     return metadata
-
-
-def extend_metadata_text_field(metadata: dict[str, Any], key: str, value: str) -> None:
-    """Insert a key into the Pandoc JSON metadata block only if it does not already exist."""
-    if key not in metadata:
-        logger.debug(f'Adding "{key}" field "{value}"')
-        metadata[key] = {"t": "MetaInlines", "c": [{"t": "Str", "c": value}]}
 
 
 @require(lambda name: len(name.strip().split()) > 0)
