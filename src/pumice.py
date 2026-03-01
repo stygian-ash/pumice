@@ -230,7 +230,15 @@ def insert_preamble(ast: Any, preamble: Path) -> Any:
     """Insert the LaTeX preamble path into the AST's metadata block."""
     path = str(preamble.absolute().with_suffix(""))
     if extend_metadata_text_field(ast["meta"], "preamble", path):
-        logger.info(f'Inserted link to preamble "{path}"')
+        logger.info(
+            'Inserted link to preamble "'
+            + str(
+                preamble.absolute()
+                .relative_to(preamble.parent.parent)
+                .with_suffix(".sty")
+            )
+            + '"'
+        )
     return ast
 
 
@@ -320,13 +328,15 @@ def filter_ast(ast: Any, format: str = "") -> Any:
     filters: list[Any] = [fix_equation_environments, fix_referenced_equations]
     if document := get_pandoc_document():
         document = document.absolute()
-        logger.info(f'Input document is "{str(document)}"')
+        logger.info(f'Input document is "{document.name}"')
         # Preamble from the Extended MathJax plugin
         if preamble := find_note_uncle(document, "preamble.sty"):
             ast = insert_preamble(ast, preamble)
         filters.append(vault_relative_path_resolver(document.parent))
         if front_matter := find_note_uncle(document, "Front Matter.md"):
-            logger.info(f'Found front matter at "{front_matter}"')
+            logger.info(
+                f'Found front matter at "{front_matter.parent.name + '/' + front_matter.name}"'
+            )
             ast = insert_front_matter(ast, front_matter)
         ast = insert_title(ast, document)
     ast = format_dates(ast)
