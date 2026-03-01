@@ -5,6 +5,7 @@ import re
 import sys
 import json
 import itertools
+from datetime import datetime
 from typing import Any, Callable, TextIO
 from pathlib import Path
 from io import TextIOWrapper
@@ -14,7 +15,7 @@ import yaml
 from loguru import logger
 from psutil import Process
 from icontract import require, ensure
-from pandocfilters import applyJSONFilters, RawInline, Str
+from pandocfilters import applyJSONFilters, RawInline, stringify, Str
 
 
 @ensure(lambda result: result is None or result.cmdline()[0].endswith("pandoc"))
@@ -285,6 +286,20 @@ def insert_title(ast: Any, document: Path) -> Any:
     return ast
 
 
+def format_dates(ast: Any) -> Any:
+    """Nicely format ISO 8601 dates given in the metadata."""
+    for value in ast["meta"].values():
+        string = stringify(value).strip()
+        try:
+            date = datetime.fromisoformat(string)
+        except ValueError:
+            continue
+        date_nice = date.strftime("%B %-d, %Y")
+        logger.info(f'Formatting date "{string}" as "{date_nice}"')
+        value["c"] = [Str(date_nice)]
+    return ast
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -305,6 +320,7 @@ def filter_ast(ast: Any, format: str = "") -> Any:
             logger.info(f'Found front matter at "{front_matter}"')
             ast = insert_front_matter(ast, front_matter)
         ast = insert_title(ast, document)
+    ast = format_dates(ast)
 
     logger.info(f"Applying {len(filters)} AST transformations")
     ast = json.loads(applyJSONFilters(filters, json.dumps(ast), format))
