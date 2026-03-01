@@ -317,6 +317,17 @@ def fix_referenced_equations(key: str, value, format: str, meta):
         return RawInline("tex", r"\begin{equation}" + value[1] + r"\end{equation}")
 
 
+# TODO: add support for headers like "## Part (a)"
+# FIXME: false positives?
+def shorten_heading_labels(key: str, value, format: str, meta):
+    """Shorten labels to manually numbered headings with captions."""
+    if key == "Header":
+        [_, caption, _] = value
+        if match := re.search("^(.+-[0-9])-", caption[0]):
+            logger.debug(f'Shortening heading label "{caption[0]}" to "{match[1]}"')
+            caption[0] = match[1]
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -325,7 +336,11 @@ def filter_ast(ast: Any, format: str = "") -> Any:
     :return: A dictionary representation of the filtered AST."""
 
     logger.info(f"Filtering JSON for output format {format}")
-    filters: list[Any] = [fix_equation_environments, fix_referenced_equations]
+    filters: list[Any] = [
+        fix_equation_environments,
+        fix_referenced_equations,
+        shorten_heading_labels,
+    ]
     if document := get_pandoc_document():
         document = document.absolute()
         logger.info(f'Input document is "{document.name}"')
