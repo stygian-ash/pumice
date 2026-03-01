@@ -300,6 +300,15 @@ def format_dates(ast: Any) -> Any:
     return ast
 
 
+def fix_referenced_equations(key: str, value, format: str, meta):
+    """Replace any display math equations that contain a label to proper
+    amsmath `equation` environments."""
+    if format != "latex":
+        return
+    if key == "Math" and value[0]["t"] == "DisplayMath" and r"\label{" in value[1]:
+        return RawInline("tex", r"\begin{equation}" + value[1] + r"\end{equation}")
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -308,7 +317,7 @@ def filter_ast(ast: Any, format: str = "") -> Any:
     :return: A dictionary representation of the filtered AST."""
 
     logger.info(f"Filtering JSON for output format {format}")
-    filters: list[Any] = [fix_equation_environments]
+    filters: list[Any] = [fix_equation_environments, fix_referenced_equations]
     if document := get_pandoc_document():
         document = document.absolute()
         logger.info(f'Input document is "{str(document)}"')
