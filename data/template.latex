@@ -54,7 +54,9 @@ $if(subtitle)$
 \makeatother
 \subtitle{$subtitle$}
 $endif$
+$if(author)$
 \author{$for(author)$$author$$sep$ \and $endfor$}
+$endif$
 \date{$date$}
 \usepackage{framed}
 
@@ -72,7 +74,9 @@ $if(title)$
 	\begin{center}
 		{\Large $title$}
 	\end{center}
-	\textit{$author$} \hfill \textit{Due $due-date$}
+	\makeatletter
+	\textit{\@author} \hfill \textit{Due $due-date$}
+	\makeatother
 \end{framed}
 \ifx\insidemaster\undefined
 	\hypersetup{
