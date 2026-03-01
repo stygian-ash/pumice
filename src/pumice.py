@@ -157,6 +157,7 @@ def fix_equation_environments(key: str, value, format: str, meta):
 )
 # FIXME: How does this work with paths containing spaces? Do we need to URL
 # decode them?
+# TODO: replace with obsidian CLI function
 def resolve_vault_relative_include(include: str, working_dir: Path) -> Path | None:
     """Resolve a vault-relative path. Search for a file matching `include` in
     the Obsidian vault containing `working_dir`."""
@@ -269,6 +270,12 @@ def insert_front_matter(ast: Any, front_matter: Path) -> Any:
     return ast
 
 
+def insert_title(ast: Any, document: Path) -> Any:
+    """Insert an appropriate title into the metadata if none already exists."""
+    extend_metadata_text_field(ast["meta"], "title", document.stem)
+    return ast
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -288,6 +295,7 @@ def filter_ast(ast: Any, format: str = "") -> Any:
         if front_matter := find_note_uncle(document, "Front Matter.md"):
             logger.info(f'Found front matter at "{front_matter}"')
             ast = insert_front_matter(ast, front_matter)
+        ast = insert_title(ast, document)
 
     logger.info(f"Applying {len(filters)} AST transformations")
     ast = json.loads(applyJSONFilters(filters, json.dumps(ast), format))
