@@ -328,6 +328,14 @@ def shorten_heading_labels(key: str, value, format: str, meta):
             caption[0] = match[1]
 
 
+def unwrap_horizontal_qed(key: str, value, format: str, meta):
+    """Remove inline math block around the `\\hqed` (horizontal mode QED) macro."""
+    if format != "latex":
+        return
+    if key == "Math" and value[1].strip() == r"\hqed":
+        return RawInline("tex", value[1])
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -340,6 +348,7 @@ def filter_ast(ast: Any, format: str = "") -> Any:
         fix_equation_environments,
         fix_referenced_equations,
         shorten_heading_labels,
+        unwrap_horizontal_qed,
     ]
     if document := get_pandoc_document():
         document = document.absolute()
