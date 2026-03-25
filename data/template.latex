@@ -75,7 +75,7 @@ $if(title)$
 		{\Large $title$}
 	\end{center}
 	\makeatletter
-	\textit{\@author} \hfill \textit{Due $due-date$}
+	\textit{\@author} \hfill $if(due-date)$\textit{Due $due-date$}$else$\textit{$date$}$endif$
 	\makeatother
 \end{framed}
 \ifx\insidemaster\undefined

@@ -72,6 +72,12 @@ def extract_document_from_pandoc_cmdline(cmdline: list[str]) -> str | None:
     parser.add_argument("-f", "--from", nargs=1)
     parser.add_argument("-t", "--to", nargs=1)
     parser.add_argument("-o", "--output", nargs=1)
+    parser.add_argument("--bibliography", nargs=1)
+    parser.add_argument("-C", "--citeproc", action="store_true")
+    parser.add_argument("--csl", nargs=1)
+    parser.add_argument("--natbib", action="store_true")
+    parser.add_argument("--biblatex", action="store_true")
+    parser.add_argument("--metadata", nargs=1)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     try:
@@ -135,6 +141,16 @@ def find_note_uncle(path: Path, filename: str) -> Path | None:
         if is_vault_root(parent):
             break
     return None
+
+
+@require(lambda path: path.exists())
+@ensure(lambda result: result is None or is_vault_root(result))
+def get_vault_root(path: Path) -> Path | None:
+    """Get the root directory of the Obsidian vault containing a path."""
+    data_dir = find_note_uncle(path, ".obsidian")
+    if not data_dir or not data_dir.is_dir():
+        return None
+    return data_dir.parent
 
 
 def fix_equation_environments(key: str, value, format: str, meta):
@@ -336,6 +352,46 @@ def unwrap_horizontal_qed(key: str, value, format: str, meta):
         return RawInline("tex", value[1])
 
 
+# TODO: support fetching CSLs if not present
+def resolve_csl(ast: Any, document: Path) -> Any:
+    """Resolve the absolute path to a CSL file specified in the metadata block
+        if it cannot be found locally. Looks for the files in the
+        `vault-root/.pandoc` directory, which is where the "Pandoc Reference List"
+        extension stores them. If no CSL field is provided, specify a default of
+        IEEE.
+
+    :param ast: The JSON AST of the document.
+    :param document: The path of the document on disk.
+    :return: The AST modified to have a valid CSL field."""
+
+    if "csl" not in ast["meta"]:
+        extend_metadata_text_field(ast["meta"], "csl", "ieee")
+    path = Path(stringify(ast["meta"]["csl"]))
+    if (document.parent / path).exists():
+        return ast
+    if not path.suffix == ".csl":
+        path = path.with_suffix(".csl")
+    if not (document.parent / path).exists():
+        root = get_vault_root(document)
+        assert (
+            root is not None
+        ), "the input document must be a member of an Obsidian vault"
+        pandoc_csl = root / ".pandoc" / path.name
+        if pandoc_csl.exists():
+            logger.debug(f'Resolved CSL file as ".pandoc/{pandoc_csl.name}"')
+            ast["meta"]["csl"]["c"] = [Str(str(pandoc_csl))]
+            return ast
+        logger.warning(f'Failed to resolve CSL file "{path}"')
+    return ast
+
+
+def short_path(path: Path) -> str:
+    """Format a Path as a short string for logging."""
+    if len(path.parts) <= 2:
+        return str(path)
+    return path.parent.name + "/" + path.name
+
+
 def filter_ast(ast: Any, format: str = "") -> Any:
     """Apply various filters to a Pandoc Markdown AST to format it for rendering.
 
@@ -358,11 +414,15 @@ def filter_ast(ast: Any, format: str = "") -> Any:
             ast = insert_preamble(ast, preamble)
         filters.append(vault_relative_path_resolver(document.parent))
         if front_matter := find_note_uncle(document, "Front Matter.md"):
-            logger.info(
-                f'Found front matter at "{front_matter.parent.name + '/' + front_matter.name}"'
-            )
+            logger.info(f'Found front matter at "{short_path(front_matter)}"')
             ast = insert_front_matter(ast, front_matter)
         ast = insert_title(ast, document)
+        if bibliography := find_note_uncle(document, "bibliography.bib"):
+            logger.info(f'Found bibliography at "{short_path(bibliography)}"')
+            extend_metadata_text_field(
+                ast["meta"], "bibliography", str(bibliography.absolute())
+            )
+        ast = resolve_csl(ast, document)
     ast = format_dates(ast)
 
     logger.info(f"Applying {len(filters)} AST transformations")
