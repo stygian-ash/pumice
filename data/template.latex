@@ -30,6 +30,10 @@ $else$
 \renewcommand{\@seccntformat}[1]{}
 \makeatother
 \setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$5$endif$}
+\usepackage{etoolbox}
+\newif\iffirstsection
+\firstsectiontrue
+\pretocmd{\section}{\iffirstsection\firstsectionfalse\else\clearpage\fi}{}{}
 $endif$
 $fonts.latex()$
 $common.latex()$
@@ -42,10 +46,6 @@ $hypersetup.latex()$
 $if(title)$
 \title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
 $endif$
-\usepackage{etoolbox}
-\newif\iffirstsection
-\firstsectiontrue
-\pretocmd{\section}{\iffirstsection\firstsectionfalse\else\clearpage\fi}{}{}
 $if(subtitle)$
 \makeatletter
 \providecommand{\subtitle}[1]{% add subtitle to \maketitle
