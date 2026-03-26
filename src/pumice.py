@@ -160,7 +160,9 @@ def fix_equation_environments(key: str, value, format: str, meta):
     if (
         key == "Math"
         and value[0]["t"] == "DisplayMath"
-        and re.search(r"^\s*\\begin\{(gather|align|equation)\*?\}", value[1])
+        and re.search(
+            r"^\s*\\begin\{(gather|flalign|alignat|align|equation)\*?\}", value[1]
+        )
     ):
         return RawInline("tex", value[1])
 
