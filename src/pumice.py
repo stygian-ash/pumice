@@ -78,6 +78,7 @@ def extract_document_from_pandoc_cmdline(cmdline: list[str]) -> str | None:
     parser.add_argument("--natbib", action="store_true")
     parser.add_argument("--biblatex", action="store_true")
     parser.add_argument("--metadata", nargs=1)
+    parser.add_argument("--pdf-engine", nargs=1)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     try:
